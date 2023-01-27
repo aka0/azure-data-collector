@@ -1,4 +1,4 @@
-"""Azure Log Analytics Data Collector API Client
+"""Azure Monitor Data Collector API Client
 
 Raises:
     DataCollectorError: Returns errors if API request was unsuccessful
