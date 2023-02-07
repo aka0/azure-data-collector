@@ -2,7 +2,8 @@
 from datetime import datetime
 
 import pytest
-from datacollector import DataCollectorClient
+
+from azuredatacollector.datacollector import DataCollectorClient
 
 
 @pytest.fixture

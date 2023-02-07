@@ -55,7 +55,7 @@ class DataCollectorClient:
         self,
         content_length: int,
         log_type: str,
-        x_ms_date: datetime.datetime = datetime.datetime.utcnow(),
+        x_ms_date: datetime.datetime,
     ) -> dict:
         """Builds authorization header as Data Collector API requirement
 
@@ -99,6 +99,12 @@ class DataCollectorClient:
             list: list of grouped rows
         """
 
+        batches: list = []
+
+        num_rows = len(data)
+        if num_rows == 0:
+            return batches
+
         if max_bytes_per_request == 0:
             max_bytes_per_request = 1
 
@@ -107,10 +113,10 @@ class DataCollectorClient:
             sys.getsizeof(json.dumps(data)) / max_bytes_per_request
         )
 
-        num_rows = len(data)
-
-        batches = []
         row_increment = math.ceil(num_rows / optimal_batch_size)
+        if row_increment == 0:
+            row_increment = 1
+
         for i in range(0, num_rows, row_increment):
             batches.append(data[i : i + row_increment])
 
@@ -164,7 +170,9 @@ class DataCollectorClient:
                 data_batch = json.dumps(batch)
 
                 headers = self.__build_authorization_headers(
-                    content_length=len(data_batch), log_type=log_type
+                    content_length=len(data_batch),
+                    log_type=log_type,
+                    x_ms_date=datetime.datetime.utcnow(),
                 )
 
                 session.headers = headers
