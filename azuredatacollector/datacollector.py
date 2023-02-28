@@ -88,7 +88,7 @@ class DataCollectorClient:
 
         return headers
 
-    def __batch(self, data: list, max_bytes_per_request: int = 30000000) -> list:
+    def __batch(self, data: list, max_bytes_per_request: int = 27000000) -> list:
         """Divide rows into batches to ensuare each batch is below the 30MB limit
 
         Args:
