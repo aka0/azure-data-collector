@@ -10,7 +10,7 @@ azure-data-collector is a Python client package for uploading events to Azure Mo
     from azuredatacollector.datacollector import DataCollectorClient
 
     # Setup client
-    client = datacollector.DataCollectorClient(
+    client = DataCollectorClient(
         WORKSPACE_ID, SHARED_KEY
     )
 
