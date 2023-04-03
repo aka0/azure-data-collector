@@ -11,8 +11,6 @@ import datetime
 import hashlib
 import hmac
 import json
-import math
-import sys
 from typing import Dict
 
 from requests import Session
@@ -22,6 +20,7 @@ DEFAULT_RESOURCE = "/api/logs"
 DEFAULT_API_VERSION = "2016-04-01"
 DEFAULT_CONTENT_TYPE = "application/json"
 DEFAULT_TIMEOUT = 30
+DEFAULT_MAX_BATCH_SIZE = 29000000
 
 
 class DataCollectorError(Exception):
@@ -46,6 +45,7 @@ class DataCollectorClient:
         )
 
         self._timeout: int = DEFAULT_TIMEOUT
+        self._max_batch_size: int = DEFAULT_MAX_BATCH_SIZE
         self._proxies: Dict[str, str] = {}
 
     def __get_xmsdate_str(self, x_ms_date: datetime.datetime) -> str:
@@ -88,43 +88,37 @@ class DataCollectorClient:
 
         return headers
 
-    def __batch(self, data: list, max_bytes_per_request: int = 27000000) -> list:
-        """Divide rows into batches to ensuare each batch is below the 30MB limit
+    def __batch(self, data: list) -> list:
+        """Divide rows into batches to ensure total request size stays below the 30MB limit.
 
         Args:
-            data (list): data to be divided up into chunks (group of rows)
-            max_bytes_per_request (int): max bytes allowed per request. Default is 30MB.
+            data (list): data to be divided into batches
 
         Returns:
-            list: list of grouped rows
+            list: list of batched rows (list of lists)
         """
-
         batches: list = []
+        tmp: list = []
+        batch_size: int = 0
 
-        num_rows = len(data)
-        if num_rows == 0:
-            return batches
+        for row in data:
+            row_size = len(str(row))
+            if batch_size + row_size <= self._max_batch_size:
+                tmp.append(row)
+                batch_size += row_size
+            else:
+                batches.append(tmp)
+                tmp = [row]
+                batch_size = row_size
 
-        if max_bytes_per_request == 0:
-            max_bytes_per_request = 1
-
-        # Calculate potentially how many batches we need
-        optimal_batch_size = math.ceil(
-            sys.getsizeof(json.dumps(data)) / max_bytes_per_request
-        )
-
-        row_increment = math.ceil(num_rows / optimal_batch_size)
-        if row_increment == 0:
-            row_increment = 1
-
-        for i in range(0, num_rows, row_increment):
-            batches.append(data[i : i + row_increment])
+        if batch_size:
+            batches.append(tmp)
 
         return batches
 
     @property
     def timeout(self) -> int:
-        """Sets API call timeout. Default is 60 seconds.
+        """Sets API call timeout. Default is 30 seconds.
 
         Returns:
             int: seconds
@@ -134,6 +128,21 @@ class DataCollectorClient:
     @timeout.setter
     def timeout(self, value: int):
         self._timeout = value
+
+    @property
+    def max_batch_size(self) -> int:
+        """Sets maximum data batch size based on string length. Default
+        is 29000000 to allow some overhead for the request headers while
+        keeping the total post size below 30MB.
+
+        Returns:
+            int: batch size
+        """
+        return self._max_batch_size
+
+    @max_batch_size.setter
+    def max_batch_size(self, value: int):
+        self._max_batch_size = value
 
     @property
     def proxies(self) -> dict:
