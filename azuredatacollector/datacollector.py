@@ -11,6 +11,7 @@ import datetime
 import hashlib
 import hmac
 import json
+import sys
 from typing import Dict
 
 from requests import Session
@@ -102,7 +103,7 @@ class DataCollectorClient:
         batch_size: int = 0
 
         for row in data:
-            row_size = len(str(row))
+            row_size = sys.getsizeof(str(row))
             if batch_size + row_size <= self._max_batch_size:
                 tmp.append(row)
                 batch_size += row_size
